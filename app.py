@@ -52,15 +52,23 @@ opciones = ['A', 'B', 'C', 'D']
 
 # Función para crear botones de respuesta
 def crear_botones_pregunta(numero_pregunta, materia):
-    cols = st.columns([1, 2, 2, 2, 2])
+    # Determinar opciones según la materia y número de pregunta
+    if materia == "Inglés" and 7 <= numero_pregunta <= 12:
+        opciones_pregunta = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
+    else:
+        opciones_pregunta = opciones
+        cols = st.columns([1, 2, 2, 2, 2])
     
     with cols[0]:
         st.write(f"**{numero_pregunta}**")
     
     respuesta_actual = st.session_state.respuestas[materia].get(numero_pregunta, None)
     
-    for i, opcion in enumerate(opciones):
-        with cols[i + 1]:
+    inicio_opciones = 0 if len(opciones_pregunta) == 8 else 1
+    
+    for i, opcion in enumerate(opciones_pregunta):
+        with cols[i + inicio_opciones]:
             # Determinar el tipo de botón según si está seleccionado
             tipo_boton = "primary" if respuesta_actual == opcion else "secondary"
             
@@ -154,9 +162,17 @@ if st.session_state.respuestas[st.session_state.materia_actual]:
     st.divider()
     st.subheader(f"📊 Resumen de Respuestas - {st.session_state.materia_actual}")
     
+    # Determinar opciones según la materia
+    if st.session_state.materia_actual == "Inglés":
+        # Contar respuestas de preguntas 7-12 (A-H) y el resto (A-D)
+        opciones_resumen = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        resumen_cols = st.columns(8)
+    else:
+        opciones_resumen = opciones
+        resumen_cols = st.columns(4)
+    
     # Crear un resumen visual
-    resumen_cols = st.columns(4)
-    for i, opcion in enumerate(opciones):
+    for i, opcion in enumerate(opciones_resumen):
         with resumen_cols[i]:
             count = list(st.session_state.respuestas[st.session_state.materia_actual].values()).count(opcion)
             st.metric(f"Opción {opcion}", count)
