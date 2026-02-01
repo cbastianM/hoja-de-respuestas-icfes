@@ -81,22 +81,14 @@ def crear_botones_pregunta(numero_pregunta, materia):
                 st.session_state.respuestas[materia][numero_pregunta] = opcion
                 st.rerun()
 
-# Crear dos columnas para las preguntas (1-20, 21-40)
+# Crear una sola columna para todas las preguntas (1-40)
 st.divider()
 st.header(st.session_state.materia_actual)
 st.divider()
 
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Preguntas 1-20")
-    for i in range(1, 21):
-        crear_botones_pregunta(i, st.session_state.materia_actual)
-
-with col2:
-    st.subheader("Preguntas 21-40")
-    for i in range(21, 41):
-        crear_botones_pregunta(i, st.session_state.materia_actual)
+st.subheader("Preguntas 1-40")
+for i in range(1, 41):
+    crear_botones_pregunta(i, st.session_state.materia_actual)
 
 # Sección de controles
 st.divider()
