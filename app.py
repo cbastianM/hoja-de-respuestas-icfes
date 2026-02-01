@@ -55,20 +55,20 @@ def crear_botones_pregunta(numero_pregunta, materia):
     # Determinar opciones según la materia y número de pregunta
     if materia == "Inglés" and 7 <= numero_pregunta <= 12:
         opciones_pregunta = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-        cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1])
+        # 1 columna para número + 8 columnas iguales para opciones
+        cols = st.columns([0.5, 1, 1, 1, 1, 1, 1, 1, 1])
     else:
         opciones_pregunta = opciones
-        cols = st.columns([1, 2, 2, 2, 2])
+        # 1 columna para número + 4 columnas iguales para opciones
+        cols = st.columns([0.5, 1, 1, 1, 1])
     
     with cols[0]:
         st.write(f"**{numero_pregunta}**")
     
     respuesta_actual = st.session_state.respuestas[materia].get(numero_pregunta, None)
     
-    inicio_opciones = 0 if len(opciones_pregunta) == 8 else 1
-    
     for i, opcion in enumerate(opciones_pregunta):
-        with cols[i + inicio_opciones]:
+        with cols[i + 1]:
             # Determinar el tipo de botón según si está seleccionado
             tipo_boton = "primary" if respuesta_actual == opcion else "secondary"
             
