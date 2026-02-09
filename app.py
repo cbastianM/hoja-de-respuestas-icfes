@@ -27,21 +27,42 @@ st.subheader("PRE-ICFES INTENSIVO")
 st.subheader('SMS GROUP')
 st.caption("SIMULACRO FINAL DE ENERO 2026")
 
+# Estructura de materias según ICFES real
+# (materia, número_preguntas, reinicia_numeración)
+ESTRUCTURA_MATERIAS = [
+    ('Matemáticas 1', 26, False),
+    ('Lectura crítica', 38, False),
+    ('Sociales y ciudadanas 1', 26, False),
+    ('Ciencias naturales 1', 20, True)  # Reinicia desde 1
+]
+
+# Calcular rangos de preguntas para cada materia
+def calcular_rangos():
+    rangos = {}
+    numero_actual = 1
+    
+    for materia, num_preguntas, reinicia in ESTRUCTURA_MATERIAS:
+        if reinicia:
+            # Para materias que reinician, siempre empieza desde 1
+            rangos[materia] = (1, num_preguntas)
+        else:
+            # Para materias secuenciales
+            rangos[materia] = (numero_actual, numero_actual + num_preguntas - 1)
+            numero_actual += num_preguntas
+    
+    return rangos
+
+RANGOS_PREGUNTAS = calcular_rangos()
+
 # Inicializar el estado de la sesión
 if 'respuestas' not in st.session_state:
-    st.session_state.respuestas = {
-        'Lectura': {},
-        'Matemáticas': {},
-        'Naturales': {},
-        'Sociales': {},
-        'Inglés': {}
-    }
+    st.session_state.respuestas = {materia: {} for materia, _, _ in ESTRUCTURA_MATERIAS}
 
 if 'nombre' not in st.session_state:
     st.session_state.nombre = ""
 
 if 'materia_actual' not in st.session_state:
-    st.session_state.materia_actual = "Lectura"
+    st.session_state.materia_actual = "Matemáticas 1"
 
 # Información del estudiante
 nombre = st.text_input("NOMBRE:", key="input_nombre", value=st.session_state.nombre)
@@ -52,24 +73,16 @@ opciones = ['A', 'B', 'C', 'D']
 
 # Función para crear botones de respuesta
 def crear_botones_pregunta(numero_pregunta, materia):
-    # Determinar opciones según la materia y número de pregunta
-    if materia == "Inglés" and 7 <= numero_pregunta <= 12:
-        opciones_pregunta = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-        # 1 columna para número + 8 columnas iguales para opciones
-        cols = st.columns([0.5, 1, 1, 1, 1, 1, 1, 1, 1])
-    else:
-        opciones_pregunta = opciones
-        # 1 columna para número + 4 columnas iguales para opciones
-        cols = st.columns([0.5, 1, 1, 1, 1])
+    # Siempre usa 4 opciones (A, B, C, D)
+    cols = st.columns([0.5, 1, 1, 1, 1])
     
     with cols[0]:
         st.write(f"**{numero_pregunta}**")
     
     respuesta_actual = st.session_state.respuestas[materia].get(numero_pregunta, None)
     
-    for i, opcion in enumerate(opciones_pregunta):
+    for i, opcion in enumerate(opciones):
         with cols[i + 1]:
-            # Determinar el tipo de botón según si está seleccionado
             tipo_boton = "primary" if respuesta_actual == opcion else "secondary"
             
             if st.button(
@@ -81,13 +94,15 @@ def crear_botones_pregunta(numero_pregunta, materia):
                 st.session_state.respuestas[materia][numero_pregunta] = opcion
                 st.rerun()
 
-# Crear una sola columna para todas las preguntas (1-40)
+# Mostrar preguntas de la materia actual
 st.divider()
 st.header(st.session_state.materia_actual)
 st.divider()
 
-st.subheader("Preguntas 1-40")
-for i in range(1, 41):
+inicio, fin = RANGOS_PREGUNTAS[st.session_state.materia_actual]
+st.subheader(f"Preguntas {inicio}-{fin}")
+
+for i in range(inicio, fin + 1):
     crear_botones_pregunta(i, st.session_state.materia_actual)
 
 # Sección de controles
@@ -101,15 +116,19 @@ with col_control1:
 
 with col_control2:
     # Mostrar progreso de la materia actual
+    inicio, fin = RANGOS_PREGUNTAS[st.session_state.materia_actual]
+    num_preguntas = fin - inicio + 1
     total_respondidas = len(st.session_state.respuestas[st.session_state.materia_actual])
-    st.metric(f"Preguntas respondidas ({st.session_state.materia_actual})", f"{total_respondidas}/40")
+    st.metric(f"Preguntas respondidas", f"{total_respondidas}/{num_preguntas}")
 
 with col_control3:
     # Botón para generar JSON
     if st.button("💾 Generar archivo JSON", type="primary", use_container_width=True):
         # Calcular estadísticas totales
         total_respondidas_global = sum(len(respuestas) for respuestas in st.session_state.respuestas.values())
-        total_preguntas_global = 200  # 5 materias x 40 preguntas
+        
+        # Calcular total de preguntas
+        total_preguntas_global = sum(num_preg for _, num_preg, _ in ESTRUCTURA_MATERIAS)
         
         # Crear el diccionario con toda la información
         datos_completos = {
@@ -123,8 +142,9 @@ with col_control3:
                 "preguntas_sin_responder": total_preguntas_global - total_respondidas_global,
                 "por_materia": {
                     materia: {
+                        "rango": f"{RANGOS_PREGUNTAS[materia][0]}-{RANGOS_PREGUNTAS[materia][1]}",
                         "respondidas": len(respuestas),
-                        "sin_responder": 40 - len(respuestas)
+                        "sin_responder": (RANGOS_PREGUNTAS[materia][1] - RANGOS_PREGUNTAS[materia][0] + 1) - len(respuestas)
                     }
                     for materia, respuestas in st.session_state.respuestas.items()
                 }
@@ -136,7 +156,7 @@ with col_control3:
         
         # Crear nombre de archivo
         nombre_estudiante = st.session_state.nombre if st.session_state.nombre else "estudiante"
-        nombre_archivo = f"respuestas de {nombre_estudiante}.json"
+        nombre_archivo = f"respuestas_{nombre_estudiante}.json"
         
         # Botón de descarga
         st.download_button(
@@ -154,17 +174,10 @@ if st.session_state.respuestas[st.session_state.materia_actual]:
     st.divider()
     st.subheader(f"📊 Resumen de Respuestas - {st.session_state.materia_actual}")
     
-    # Determinar opciones según la materia
-    if st.session_state.materia_actual == "Inglés":
-        # Contar respuestas de preguntas 7-12 (A-H) y el resto (A-D)
-        opciones_resumen = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-        resumen_cols = st.columns(8)
-    else:
-        opciones_resumen = opciones
-        resumen_cols = st.columns(4)
+    resumen_cols = st.columns(4)
     
     # Crear un resumen visual
-    for i, opcion in enumerate(opciones_resumen):
+    for i, opcion in enumerate(opciones):
         with resumen_cols[i]:
             count = list(st.session_state.respuestas[st.session_state.materia_actual].values()).count(opcion)
             st.metric(f"Opción {opcion}", count)
@@ -175,17 +188,18 @@ with st.sidebar:
     st.divider()
     
     # Crear botones para cada materia
-    materias = ['Lectura', 'Matemáticas', 'Naturales', 'Sociales', 'Inglés']
-    
-    for materia in materias:
+    for materia, num_preguntas, _ in ESTRUCTURA_MATERIAS:
         respondidas = len(st.session_state.respuestas[materia])
-        emoji = "✅" if respondidas == 40 else "📝"
+        emoji = "✅" if respondidas == num_preguntas else "📝"
         
         # Determinar el tipo de botón
         tipo = "primary" if st.session_state.materia_actual == materia else "secondary"
         
+        inicio, fin = RANGOS_PREGUNTAS[materia]
+        label = f"{emoji} {materia} ({respondidas}/{num_preguntas})"
+        
         if st.button(
-            f"{emoji} {materia} ({respondidas}/40)",
+            label,
             key=f"materia_{materia}",
             type=tipo,
             use_container_width=True
@@ -198,18 +212,21 @@ with st.sidebar:
     # Resumen global
     st.subheader("📊 Progreso Total")
     total_global = sum(len(respuestas) for respuestas in st.session_state.respuestas.values())
-    st.progress(total_global / 200)
-    st.metric("Total respondidas", f"{total_global}/200")
+    total_preguntas = sum(num_preg for _, num_preg, _ in ESTRUCTURA_MATERIAS)
+    st.progress(total_global / total_preguntas)
+    st.metric("Total respondidas", f"{total_global}/{total_preguntas}")
+    
+    st.divider()
+    
+    # Información de rangos
+    st.subheader("📋 Rangos de Preguntas")
+    for materia, _, _ in ESTRUCTURA_MATERIAS:
+        inicio, fin = RANGOS_PREGUNTAS[materia]
+        st.caption(f"**{materia}:** {inicio}-{fin}")
     
     st.divider()
     
     # Botón para limpiar todo
     if st.button("🗑️ Limpiar todo", use_container_width=True):
-        st.session_state.respuestas = {
-            'Lectura': {},
-            'Matemáticas': {},
-            'Naturales': {},
-            'Sociales': {},
-            'Inglés': {}
-        }
+        st.session_state.respuestas = {materia: {} for materia, _, _ in ESTRUCTURA_MATERIAS}
         st.rerun()
