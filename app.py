@@ -27,8 +27,8 @@ st.caption("SIMULACRO FINAL DE ENERO 2026")
 MATERIAS_CONFIG = [
     ('Matemáticas ',           1,  20),
     ('Lectura crítica',         1, 20),
-    ('Sociales y ciudadanas 1', 1, 25),
-    ('Ciencias naturales 1',    1,  20),
+    ('Sociales y ciudadanas', 1, 25),
+    ('Ciencias naturales',    1,  20),
 ]
 # ============================================================
 
