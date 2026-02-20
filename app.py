@@ -13,7 +13,7 @@ st.set_page_config(
 st.title("HOJA DE RESPUESTAS")
 st.subheader("PRE-ICFES INTENSIVO")
 st.subheader('SMS GROUP')
-st.caption("SIMULACRO FINAL DE ENERO 2026")
+st.caption("SIMULACRO FEBRERO 2026")
 
 # ============================================================
 # CONFIGURACIÓN DE MATERIAS - EDITA AQUÍ FÁCILMENTE
