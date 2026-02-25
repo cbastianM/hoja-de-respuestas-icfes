@@ -18,23 +18,24 @@ st.caption("SIMULACRO FEBRERO 2026")
 # ============================================================
 # CONFIGURACIÓN DE MATERIAS - EDITA AQUÍ FÁCILMENTE
 # ============================================================
-# Formato: (nombre_materia, pregunta_inicio, pregunta_fin)
-# - pregunta_inicio: número de la primera pregunta
-# - pregunta_fin: número de la última pregunta
-#
-# Ejemplo: ('Matemáticas 1', 1, 26) → preguntas 1 a 26
+# Formato: (nombre_materia, pregunta_inicio, pregunta_fin, opciones)
+# - opciones: lista de opciones de respuesta para esa materia
+
+OPCIONES_ABCD = ['A', 'B', 'C', 'D']
+OPCIONES_INGLES = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 
 MATERIAS_CONFIG = [
-    ('Matemáticas ',           1,  20),
-    ('Lectura crítica',         1, 20),
-    ('Sociales y ciudadanas', 1, 25),
-    ('Ciencias naturales',    1,  20),
+    ('Matemáticas',           1, 40, OPCIONES_ABCD),
+    ('Lectura crítica',       1, 40, OPCIONES_ABCD),
+    ('Sociales y ciudadanas', 1, 40, OPCIONES_ABCD),
+    ('Ciencias naturales',    1, 40, OPCIONES_ABCD),
+    ('Inglés',                1, 40, OPCIONES_INGLES),
 ]
 # ============================================================
 
 # Inicializar estado
 if 'respuestas' not in st.session_state:
-    st.session_state.respuestas = {m: {} for m, _, _ in MATERIAS_CONFIG}
+    st.session_state.respuestas = {m: {} for m, _, _, _ in MATERIAS_CONFIG}
 
 if 'nombre' not in st.session_state:
     st.session_state.nombre = ""
@@ -43,11 +44,11 @@ if 'materia_actual' not in st.session_state:
     st.session_state.materia_actual = MATERIAS_CONFIG[0][0]
 
 # Validar que materia_actual existe en config actual
-if st.session_state.materia_actual not in [m for m, _, _ in MATERIAS_CONFIG]:
+if st.session_state.materia_actual not in [m for m, _, _, _ in MATERIAS_CONFIG]:
     st.session_state.materia_actual = MATERIAS_CONFIG[0][0]
 
 # Sincronizar respuestas con config (por si se cambian materias)
-for materia, _, _ in MATERIAS_CONFIG:
+for materia, _, _, _ in MATERIAS_CONFIG:
     if materia not in st.session_state.respuestas:
         st.session_state.respuestas[materia] = {}
 
@@ -55,16 +56,19 @@ for materia, _, _ in MATERIAS_CONFIG:
 nombre = st.text_input("NOMBRE:", key="input_nombre", value=st.session_state.nombre)
 st.session_state.nombre = nombre
 
-opciones = ['A', 'B', 'C', 'D']
 
-def crear_botones_pregunta(numero_pregunta, materia):
-    cols = st.columns([0.5, 1, 1, 1, 1])
+def crear_botones_pregunta(numero_pregunta, materia, opciones_materia):
+    num_opciones = len(opciones_materia)
+    # Columna para número + columnas para cada opción
+    col_widths = [0.5] + [1] * num_opciones
+    cols = st.columns(col_widths)
+    
     with cols[0]:
         st.write(f"**{numero_pregunta}**")
     
     respuesta_actual = st.session_state.respuestas[materia].get(numero_pregunta, None)
     
-    for i, opcion in enumerate(opciones):
+    for i, opcion in enumerate(opciones_materia):
         with cols[i + 1]:
             tipo_boton = "primary" if respuesta_actual == opcion else "secondary"
             if st.button(
@@ -78,7 +82,7 @@ def crear_botones_pregunta(numero_pregunta, materia):
 
 # Obtener datos de materia actual
 materia_actual = st.session_state.materia_actual
-inicio, fin = next((i, f) for m, i, f in MATERIAS_CONFIG if m == materia_actual)
+inicio, fin, opciones_actuales = next((i, f, o) for m, i, f, o in MATERIAS_CONFIG if m == materia_actual)
 num_preguntas = fin - inicio + 1
 
 # Mostrar preguntas
@@ -88,7 +92,7 @@ st.subheader(f"Preguntas {inicio}-{fin}")
 st.divider()
 
 for i in range(inicio, fin + 1):
-    crear_botones_pregunta(i, materia_actual)
+    crear_botones_pregunta(i, materia_actual, opciones_actuales)
 
 # Controles
 st.divider()
@@ -106,7 +110,7 @@ with col2:
 with col3:
     if st.button("💾 Generar archivo JSON", type="primary", use_container_width=True):
         total_respondidas_global = sum(len(r) for r in st.session_state.respuestas.values())
-        total_preguntas_global = sum(f - i + 1 for _, i, f in MATERIAS_CONFIG)
+        total_preguntas_global = sum(f - i + 1 for _, i, f, _ in MATERIAS_CONFIG)
         
         datos_completos = {
             "informacion_estudiante": {"nombre": st.session_state.nombre},
@@ -121,7 +125,7 @@ with col3:
                         "respondidas": len(st.session_state.respuestas.get(m, {})),
                         "sin_responder": (f - i + 1) - len(st.session_state.respuestas.get(m, {}))
                     }
-                    for m, i, f in MATERIAS_CONFIG
+                    for m, i, f, _ in MATERIAS_CONFIG
                 }
             }
         }
@@ -142,8 +146,8 @@ with col3:
 if st.session_state.respuestas[materia_actual]:
     st.divider()
     st.subheader(f"📊 Resumen - {materia_actual}")
-    resumen_cols = st.columns(4)
-    for i, opcion in enumerate(opciones):
+    resumen_cols = st.columns(len(opciones_actuales))
+    for i, opcion in enumerate(opciones_actuales):
         with resumen_cols[i]:
             count = list(st.session_state.respuestas[materia_actual].values()).count(opcion)
             st.metric(f"Opción {opcion}", count)
@@ -155,7 +159,7 @@ with st.sidebar:
     st.header("📚 MATERIAS")
     st.divider()
     
-    for materia, ini, fi in MATERIAS_CONFIG:
+    for materia, ini, fi, _ in MATERIAS_CONFIG:
         n_preg = fi - ini + 1
         respondidas = len(st.session_state.respuestas.get(materia, {}))
         emoji = "✅" if respondidas == n_preg else "📝"
@@ -175,7 +179,7 @@ with st.sidebar:
     # Progreso total
     st.subheader("📊 Progreso Total")
     total_global = sum(len(r) for r in st.session_state.respuestas.values())
-    total_preguntas = sum(f - i + 1 for _, i, f in MATERIAS_CONFIG)
+    total_preguntas = sum(f - i + 1 for _, i, f, _ in MATERIAS_CONFIG)
     st.progress(total_global / total_preguntas if total_preguntas > 0 else 0)
     st.metric("Total respondidas", f"{total_global}/{total_preguntas}")
     
@@ -183,11 +187,12 @@ with st.sidebar:
     
     # Tabla de rangos
     st.subheader("📋 Rangos de Preguntas")
-    for materia, ini, fi in MATERIAS_CONFIG:
-        st.caption(f"**{materia}:** {ini}-{fi}")
+    for materia, ini, fi, opts in MATERIAS_CONFIG:
+        opciones_str = f" (Opciones: {opts[0]}-{opts[-1]})" if len(opts) > 4 else ""
+        st.caption(f"**{materia}:** {ini}-{fi}{opciones_str}")
     
     st.divider()
     
     if st.button("🗑️ Limpiar todo", use_container_width=True):
-        st.session_state.respuestas = {m: {} for m, _, _ in MATERIAS_CONFIG}
+        st.session_state.respuestas = {m: {} for m, _, _, _ in MATERIAS_CONFIG}
         st.rerun()
