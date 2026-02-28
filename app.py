@@ -29,7 +29,7 @@ MATERIAS_CONFIG = [
     ('Lectura crítica',       1, 40, OPCIONES_ABCD),
     ('Sociales y ciudadanas', 1, 40, OPCIONES_ABCD),
     ('Ciencias naturales',    1, 40, OPCIONES_ABCD),
-    ('Inglés',                1, 40, OPCIONES_INGLES),
+    ('Inglés',                1, 25, OPCIONES_INGLES),
 ]
 # ============================================================
 
